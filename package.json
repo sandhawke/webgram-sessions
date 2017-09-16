@@ -1,0 +1,27 @@
+{
+  "name": "webgram-logins",
+  "version": "0.0.1",
+  "description": "offer device authentication / logins for webgram",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && tap --cov test*.js",
+    "coverage": "standard && tap --cov test*.js --coverage-report=lcov",
+    "release": "npm version patch && git push --follow-tags && npm publish"
+  },
+  "repository": {
+    "type": "git",
+    "url": "htts://github.com/sandhawke/webgram-logins"
+  },
+  "author": "Sandro Hawke (http://hawke.org/sandro)",
+  "license": "MIT",
+  "dependencies": {
+    "level": "^1.7.0",
+    "opn": "^5.1.0",
+    "tap": "^10.7.2",
+    "tape": "^4.8.0"
+  },
+  "browser": "browser_client.js",
+  "devDependencies": {
+    "browserify": "^14.4.0"
+  }
+}

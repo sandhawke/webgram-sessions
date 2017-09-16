@@ -1,0 +1,12 @@
+*~
+/node_modules
+/OLD
+events.log
+coverage
+static/bundle*
+static/assets/*
+.nyc*
+db.level
+db-test
+client-login-data.json
+webgram-logins-secrets/
