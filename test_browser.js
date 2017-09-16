@@ -2,9 +2,9 @@
 
 const test = require('tape')
 const browserify = require('browserify')
-const webgram = require('.')
+const webgram = require('webgram')
 const opn = require('opn')
-// const teen = require('teen_process')
+const logins = require('.')
 
 test(async (t) => {
   t.plan(1)
@@ -12,6 +12,7 @@ test(async (t) => {
   const b = browserify('browser_test_1.js')
 
   const s = new webgram.Server()
+  logins.attach(s)
 
   s.app.get('/', (req, res) => {
     res.send(`<!doctype html>
@@ -32,6 +33,10 @@ test(async (t) => {
   })
 
   await s.start() // need to wait for address
+
+  s.on('ping', (conn, ...args) => {
+    conn.send('pong', ...args)
+  })
 
   s.on('equal', (conn, a, b) => {
     console.log('called equal', a, b)

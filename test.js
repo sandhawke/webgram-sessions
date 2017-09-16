@@ -7,16 +7,16 @@ const logins = require('.')
 test(async (t) => {
   t.plan(1)
   const s = new webgram.Server()
-  logins.server.attach(s)
+  logins.attach(s)
   await s.start() // need to wait for address
 
   s.on('ping', (conn, ...args) => {
     conn.send('pong', ...args)
   })
-  
+
   // console.log('address', s.address)
   const c = new webgram.Client(s.address)
-  logins.client.attach(c)
+  logins.attach(c)
   c.on('pong', (text) => {
     console.log('test response to c1:', text)
     t.equal(text, 'hello')
