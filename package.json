@@ -1,6 +1,6 @@
 {
   "name": "webgram-logins",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "offer device authentication / logins for webgram",
   "main": "index.js",
   "scripts": {
