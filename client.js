@@ -3,11 +3,11 @@
 const webgram = require('webgram')
 const level = require('level')
 const alevel = require('./asynclevel')
-const debug = require('debug')('webgram-sessions-client')
+const debug = require('debug')('webgram-sessions:client')
 
 async function attach (client, options = {}) {
   const db = (options.db ||
-              level(options.path || 'webgram-client-secrets', {
+              level(options.sessionPath || 'webgram-client-secrets', {
                 valueEncoding: 'json'
               }))
 
@@ -75,7 +75,7 @@ class Client extends webgram.Client {
       this.inSession = true
       debug('sending normally now')
     })
-    attach(this)
+    attach(this, this)
   }
 
   // this is how we escape the buffering for our setup messages
@@ -88,7 +88,7 @@ class Client extends webgram.Client {
     if (this.inSession) {
       super.send(...args)
     } else {
-      debug('buffering until session is ready', args)
+      debug('buffering until session is ready %o', args)
       this.sessionBuffer.push(JSON.stringify(args))
     }
   }

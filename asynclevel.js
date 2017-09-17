@@ -4,6 +4,7 @@
 
 function get (db, key) {
   return new Promise((resolve, reject) => {
+    if (db === 'skip') reject({notFound: true})
     db.get(key, (err, data) => {
       if (err) reject(err)
       resolve(data)
@@ -13,6 +14,7 @@ function get (db, key) {
 
 function put (db, key, value) {
   return new Promise((resolve, reject) => {
+    if (db === 'skip') resolve()
     db.put(key, value, (err) => {
       if (err) reject(err)
       resolve()

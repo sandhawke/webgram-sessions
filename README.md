@@ -1,4 +1,8 @@
 
+MAYBE this should move back into webgram?  It'd be more smooth there.
+It can remain separate files...?
+
+
 Add securely-resumable-sessions to webgram, using secrets kept in
 localStorage.  Basically, makes it easy for server code to remember
 which client it's talking to, like cookies.
@@ -26,7 +30,7 @@ const sessions = require('webgram-sessions')
 const c = new sessions.Client('ws://localhost:5678')
 
 // everything else is the same
-})
+// ...
 ```
 
 The server isn't bad: just attach the sessions plugin and ignore

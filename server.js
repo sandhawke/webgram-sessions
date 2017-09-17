@@ -3,7 +3,7 @@
 const crypto = require('crypto')
 const level = require('level')
 const alevel = require('./asynclevel')
-const debug = require('debug')('webgram-logins-server')
+const debug = require('debug')('webgram_sessions_server')
 const webgram = require('webgram')
 
 function attach (server, options = {}) {
@@ -14,14 +14,26 @@ function attach (server, options = {}) {
                 valueEncoding: 'json'
               }))
 
-  let nextSessionID = 0
+  let nextSessionID = null
   const dispenseSessionID = async () => {
+    debug('dispensing session id')
     if (!nextSessionID) {
       try {
-        nextSessionID = await alevel.get(db, 'nextSessionID')
+        const tmp = await alevel.get(db, 'nextSessionID')
+        if (nextSessionID === null) {
+          debug('we were the first to read it')
+          nextSessionID = tmp
+        } else {
+          debug('someone else read it before us')
+        }
       } catch (e) {
         if (e.notFound) {
-          nextSessionID = 1
+          debug('nothing in database')
+          // while we were waiting, someone else might have set it
+          if (nextSessionID === null) {
+            debug('an its still null')
+            nextSessionID = 1
+          }
         } else {
           throw e
         }
@@ -29,7 +41,12 @@ function attach (server, options = {}) {
     }
     const sessionID = nextSessionID
     nextSessionID++
+    debug('now we have set nextSessionID =', nextSessionID)
+    // what if these end up occuring out of order...  is that possible?
+    // If we queue up many of these, maybe the highest wont be the one
+    // written.  Maybe best to use writeFileSync, not in async code...?
     await alevel.put(db, 'nextSessionID', nextSessionID)
+    debug('... and saved it, ', sessionID + 1, nextSessionID)
     return sessionID
   }
 
@@ -37,7 +54,7 @@ function attach (server, options = {}) {
     // write conn.sessionData to disk, which you should probably do after
     // you modify it for some reason.
     async save () {
-      debug('SAVING', this.sessionData._sessionID, JSON.stringify(this.sessionData, null, 2))
+      debug('saving %n %j', this.sessionData._sessionID, this.sessionData)
       await alevel.put(db, this.sessionData._sessionID, this.sessionData)
       this.emit('$save')
     }
@@ -75,7 +92,7 @@ function attach (server, options = {}) {
     if (!sessionData) {
       try {
         sessionData = await alevel.get(db, _sessionID)
-        debug('loaded sessionData', sessionData)
+        debug('loaded sessionData %o', sessionData)
       } catch (err) {
         if (err.notFound) {
           debug('no match for id', _sessionID)
