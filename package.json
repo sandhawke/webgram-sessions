@@ -1,7 +1,7 @@
 {
-  "name": "webgram-logins",
+  "name": "webgram-sessions",
   "version": "0.0.3",
-  "description": "offer device authentication / logins for webgram",
+  "description": "recognize devices and store session state for webgram",
   "main": "index.js",
   "scripts": {
     "test": "standard && tap --cov test*.js",
@@ -10,18 +10,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "htts://github.com/sandhawke/webgram-logins"
+    "url": "htts://github.com/sandhawke/webgram-sessions"
   },
   "author": "Sandro Hawke (http://hawke.org/sandro)",
   "license": "MIT",
   "dependencies": {
-    "level": "^1.7.0",
-    "opn": "^5.1.0",
-    "tap": "^10.7.2",
-    "tape": "^4.8.0"
+    "level": "^1.7.0"
   },
   "browser": "browser_client.js",
   "devDependencies": {
-    "browserify": "^14.4.0"
+    "browserify": "^14.4.0",
+    "opn": "^5.1.0",
+    "tap": "^10.7.2",
+    "tape": "^4.8.0"
   }
 }

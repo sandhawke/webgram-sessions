@@ -6,7 +6,5 @@ coverage
 static/bundle*
 static/assets/*
 .nyc*
-db.level
-db-test
-client-login-data.json
-webgram-logins-secrets/
+webgram-client-secrets/
+webgram-server-secrets/

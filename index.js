@@ -14,4 +14,5 @@ function attach (arg, opts) {
 
 module.exports.server = require('./server')
 module.exports.client = require('./client')
+module.exports.Client = require('./client').Client
 module.exports.attach = attach

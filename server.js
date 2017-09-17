@@ -2,121 +2,123 @@
 
 const crypto = require('crypto')
 const level = require('level')
+const alevel = require('./asynclevel')
 const debug = require('debug')('webgram-logins-server')
 const webgram = require('webgram')
 
 function attach (server, options = {}) {
+  const sessionDataBySessionID = new Map()
+
   const db = (options.db ||
-              level(options.path || 'webgram-logins-secrets', {
+              level(options.path || 'webgram-server-secrets', {
                 valueEncoding: 'json'
               }))
 
-  let nextUID = 0
-  const genUID = async () => {
-    if (!nextUID) {
+  let nextSessionID = 0
+  const dispenseSessionID = async () => {
+    if (!nextSessionID) {
       try {
-        nextUID = await get(db, 'nextUID')
+        nextSessionID = await alevel.get(db, 'nextSessionID')
       } catch (e) {
         if (e.notFound) {
-          nextUID = 1
+          nextSessionID = 1
         } else {
           throw e
         }
       }
     }
-    const uid = nextUID
-    nextUID++
-    await put(db, 'nextUID', nextUID)
-    return uid
+    const sessionID = nextSessionID
+    nextSessionID++
+    await alevel.put(db, 'nextSessionID', nextSessionID)
+    return sessionID
   }
 
   class Connection extends webgram.Server.Connection {
-  // write conn.userData to disk, which you should probably do after
-  // you modify it for some reason.
+    // write conn.sessionData to disk, which you should probably do after
+    // you modify it for some reason.
     async save () {
-      debug('SAVING', this.userData._uid, JSON.stringify(this.userData, null, 2))
-      await put(db, this.userData._uid, this.userData)
-    }
-
-    async createLogin (auth) {
-      const _uid = await genUID()
-      const _secret = crypto.randomBytes(64).toString('base64')
-      const _firstVisitTime = new Date()
-      const _latestVisitTime = _firstVisitTime
-      const userData = {
-        _uid,
-        _secret,
-        _firstVisitTime,
-        _latestVisitTime
-      }
-
-    // carry through some properties?
-      if (auth._displayName) userData._displayName = auth._displayName
-
-      this.userData = userData
-      await this.save()
-    }
-
-    async login (auth) {
-      let userData
-      try {
-        userData = await get(db, auth._uid)
-      } catch (err) {
-        if (err.notFound) return 'unknown uid'
-        console.error('error in looking for userdata', err)
-        return 'internal error'
-      }
-
-    // todo: add some crypto
-      if (userData.secret === auth.secret) {
-        userData._previousVisitTime = userData._latestVisitTime
-        userData._latestVisitTime = new Date()
-        this.userData = userData
-        await this.save()
-        return null // success
-      }
-      return 'incorrect secret'
+      debug('SAVING', this.sessionData._sessionID, JSON.stringify(this.sessionData, null, 2))
+      await alevel.put(db, this.sessionData._sessionID, this.sessionData)
+      this.emit('$save')
     }
   }
 
   server.ConnectionClass = Connection
 
-  server.on('please-log-me-in', async (conn, auth) => {
-    if (auth.create) {
-      delete auth.create
-      await conn.createLogin(auth)
-      conn.send('you-are-logged-in', conn.userData)
-    } else {
-      const fail = await conn.login(auth)
-      if (fail) {
-        conn.send('login-failed', fail)
+  server.on('session-create', async (conn, _fromClient) => {
+    const _sessionID = await dispenseSessionID()
+    const _secret = (await randomBytes(64)).toString('base64')
+    const _firstVisitTime = new Date()
+    const _latestVisitTime = _firstVisitTime
+    const sessionData = {
+      _sessionID,
+      _secret,
+      _firstVisitTime,
+      _latestVisitTime,
+      _fromClient
+    }
+
+    await conclude(conn, sessionData, 'create')
+    conn.send('session-ok', _sessionID, _secret)
+  })
+
+  server.on('session-resume', async (conn, _sessionID, _secret) => {
+    debug('session-resume', _sessionID, _secret)
+    let sessionData
+
+    // memory cache of sessionData, but also needed to have structure
+    // sharing in case the same sessionID logs in to two connections at
+    // once.  With this, they'll share the same sessionData object.
+    // When they .save we can notify the other connections.
+    sessionData = sessionDataBySessionID.get(_sessionID)
+    debug('cached sessionData', sessionData)
+    if (!sessionData) {
+      try {
+        sessionData = await alevel.get(db, _sessionID)
+        debug('loaded sessionData', sessionData)
+      } catch (err) {
+        if (err.notFound) {
+          debug('no match for id', _sessionID)
+          conn.send('session-error', 'incorrect-id')
+        } else {
+          console.error('error in looking for userdata', err)
+          conn.send('session-error', 'internal-error')
+        }
         return
       }
-      conn.send('you-are-logged-in', conn.userData)
     }
-    server.emit('$login', conn)
-    conn.emit('$login')
-    debug('client logged in')
+
+    // todo: add some crypto
+
+    if (sessionData._secret !== _secret) {
+      debug('mismatch', sessionData.secret, _secret)
+      conn.send('session-error', 'incorrect-secret')
+      return
+    }
+
+    sessionData._previousVisitTime = sessionData._latestVisitTime
+    sessionData._latestVisitTime = new Date()
+
+    await conclude(conn, sessionData)
+    conn.send('session-ok', _sessionID)
   })
+
+  async function conclude (conn, sessionData) {
+    const id = sessionData._sessionID
+    conn.sessionData = sessionData
+    sessionDataBySessionID.set(id, sessionData)
+    await conn.save()
+    server.emit('$session-active', conn)
+    conn.emit('$session-active')
+    debug('session-create complete')
+  }
 }
 
-// alas, right now the Promises support in leveldb isn't released
-
-function get (db, key) {
+async function randomBytes (count) {
   return new Promise((resolve, reject) => {
-    debug('doing get', key)
-    db.get(key, (err, data) => {
+    crypto.randomBytes(64, (err, buf) => {
       if (err) reject(err)
-      resolve(data)
-    })
-  })
-}
-
-function put (db, key, value) {
-  return new Promise((resolve, reject) => {
-    db.put(key, value, (err) => {
-      if (err) reject(err)
-      resolve()
+      resolve(buf)
     })
   })
 }

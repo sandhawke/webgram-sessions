@@ -6,7 +6,10 @@ const logins = require('.')
 
 test(async (t) => {
   t.plan(1)
-  const s = new webgram.Server()
+
+  // need fixed port for session restore
+  const s = new webgram.Server({port: 9891})
+
   logins.attach(s)
   await s.start() // need to wait for address
 
@@ -26,8 +29,8 @@ test(async (t) => {
     })
   })
   // c.send('$ping', 'hello')  // this is probably before connected, so queued
-  c.on('$login', u => {
-    console.log('logged in as', u)
+  c.on('$session-active', () => {
+    console.log('session data: ', c.sessionData)
     c.send('ping', 'hello')
   })
 })

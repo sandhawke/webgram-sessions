@@ -1,28 +1,42 @@
 'use strict'
 
-function attach (client, options) {
-  client.on('login-failed', fail => {
-    throw Error('login failed: ' + fail)   // .msg?
-  })
-  client.on('you-are-logged-in', userData => {
-    window.localStorage.setItem('currentLogin', JSON.stringify(userData))
+const debug = require('debug')('webgram-sessions-client')
 
-    // Add it to a table of many saved logins to select among
-    let logins = window.localStorage.getItem('logins') || '{}'
-    logins = JSON.parse(logins)
-    logins[userData._uid] = userData
-    logins = JSON.stringify(logins)
-    window.localStorage.setItem('logins', logins)
-
-    client.emit('$login', userData)
+async function attach (client, options = {}) {
+  client.on('session-error', msg => {
+    throw Error('login failed: ' + msg)
   })
 
-  client.userData = JSON.parse(window.localStorage.getItem('currentLogin'))
-  if (!client.userData) {
-    client.userData = { create: true }
+  client.on('session-ok', async (id, secret) => {
+    if (secret) {
+      const sessionData = {
+        address: client.address,
+        id,
+        secret,
+        whenAdded: new Date()
+      }
+      client.sessionData = sessionData
+      window.localStorage.setItem(client.address, JSON.stringify(sessionData))
+    }
+    client.emit('$session-active')
+  })
+
+  if (!client.sessionData) {
+    debug('looking for saved session data')
+    client.sessionData = window.localStorage.getItem(client.address)
   }
-  client.send('please-log-me-in', client.userData)
+
+  if (client.sessionData) {
+    debug('trying to resume session', client.sessionData.id)
+    client.send('session-resume',
+                client.sessionData.id,
+                client.sessionData.secret)
+  } else {
+    client.send('session-create')
+  }
 }
 
-module.exports.client = { attach }
 module.exports.attach = attach
+
+// for when this gets substited for index.js by browserify
+module.exports.client = { attach }
