@@ -27,6 +27,7 @@ const c = new sessions.Client('ws://localhost:5678')
 
 // everything else is the same
 })
+```
 
 The server isn't bad: just attach the sessions plugin and ignore
 connections until they trigger $session-active:
