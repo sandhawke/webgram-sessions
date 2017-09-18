@@ -18,7 +18,7 @@
     "dom-storage": "^2.0.2",
     "level": "^1.7.0"
   },
-  "browser": "browser_client.js",
+  "browser": "client.js",
   "devDependencies": {
     "browserify": "^14.4.0",
     "opn": "^5.1.0",

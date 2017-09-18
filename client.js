@@ -5,14 +5,11 @@
 // or figure out how to factor them together, given packaging for the browser...
 
 const webgram = require('webgram')
-const Storage = require('dom-storage')
 const debug = require('debug')('webgram_sessions_client')
+const myStorage = require('./storage')
 
 async function attach (client, options = {}) {
-  const localStorage = new Storage(
-    options.clientSecretsDBName || 'webgram-client-secrets.json',
-    { strict: false, ws: '  ' }
-  )
+  const localStorage = myStorage(options)
 
   client.on('session-error', msg => {
     throw Error('login failed: ' + msg)
@@ -35,7 +32,7 @@ async function attach (client, options = {}) {
 
   if (!client.sessionData) {
     debug('looking for saved session data')
-    client.sessionData = localStorage.getItem(client.address)
+    client.sessionData = JSON.parse(localStorage.getItem(client.address))
   }
 
   // use sendDuringSetup if we have it
@@ -44,7 +41,7 @@ async function attach (client, options = {}) {
                 : client.send.bind(client))
 
   if (client.sessionData) {
-    debug('trying to resume session', client.sessionData.id)
+    debug('trying to resume session using %O', client.sessionData)
     send('session-resume',
          client.sessionData.id,
          client.sessionData.secret)
@@ -88,3 +85,6 @@ class Client extends webgram.Client {
 
 module.exports.attach = attach
 module.exports.Client = Client
+
+// for when this gets substited for index.js by browserify
+module.exports.client = { attach, Client }

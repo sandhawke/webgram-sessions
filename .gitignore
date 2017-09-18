@@ -6,5 +6,6 @@ coverage
 static/bundle*
 static/assets/*
 .nyc*
-webgram-client-secrets/
-webgram-server-secrets/
+webgram-client-secret*
+webgram-server-secret*
+webgram-client-secrets.json
