@@ -10,44 +10,48 @@ function attach (server, options = {}) {
   const sessionDataBySessionID = new Map()
 
   const db = (options.db ||
-              level(options.path || 'webgram-server-secrets', {
+              level(options.serverSecretsDBName || 'webgram-server-secrets', {
                 valueEncoding: 'json'
               }))
 
   let nextSessionID = null
-  const dispenseSessionID = async () => {
-    debug('dispensing session id')
-    if (!nextSessionID) {
-      try {
-        const tmp = await alevel.get(db, 'nextSessionID')
-        if (nextSessionID === null) {
-          debug('we were the first to read it')
-          nextSessionID = tmp
-        } else {
-          debug('someone else read it before us')
-        }
-      } catch (e) {
-        if (e.notFound) {
-          debug('nothing in database')
-          // while we were waiting, someone else might have set it
+
+  if (!options.dispenseSessionID) {
+    options.dispenseSessionID = async () => {
+      debug('dispensing session id')
+      if (!nextSessionID) {
+        try {
+          const tmp = await alevel.get(db, 'nextSessionID')
           if (nextSessionID === null) {
-            debug('an its still null')
-            nextSessionID = 1
+            debug('we were the first to read it')
+            nextSessionID = tmp
+          } else {
+            debug('someone else read it before us')
           }
-        } else {
-          throw e
+        } catch (e) {
+          if (e.notFound) {
+            debug('nothing in database')
+            // while we were waiting, someone else might have set it
+            if (nextSessionID === null) {
+              debug('an its still null')
+              nextSessionID = 1
+            }
+          } else {
+            throw e
+          }
         }
       }
+
+      const sessionID = nextSessionID
+      nextSessionID++
+      debug('now we have set nextSessionID =', nextSessionID)
+      // what if these end up occuring out of order...  is that possible?
+      // If we queue up many of these, maybe the highest wont be the one
+      // written.  Maybe best to use writeFileSync, not in async code...?
+      await alevel.put(db, 'nextSessionID', nextSessionID)
+      debug('... and saved it, ', sessionID + 1, nextSessionID)
+      return sessionID
     }
-    const sessionID = nextSessionID
-    nextSessionID++
-    debug('now we have set nextSessionID =', nextSessionID)
-    // what if these end up occuring out of order...  is that possible?
-    // If we queue up many of these, maybe the highest wont be the one
-    // written.  Maybe best to use writeFileSync, not in async code...?
-    await alevel.put(db, 'nextSessionID', nextSessionID)
-    debug('... and saved it, ', sessionID + 1, nextSessionID)
-    return sessionID
   }
 
   class Connection extends webgram.Server.Connection {
@@ -63,7 +67,7 @@ function attach (server, options = {}) {
   server.ConnectionClass = Connection
 
   server.on('session-create', async (conn, _fromClient) => {
-    const _sessionID = await dispenseSessionID()
+    const _sessionID = await options.dispenseSessionID()
     const _secret = (await randomBytes(64)).toString('base64')
     const _firstVisitTime = new Date()
     const _latestVisitTime = _firstVisitTime

@@ -7,7 +7,7 @@ const debug = require('debug')('webgram-sessions:client')
 
 async function attach (client, options = {}) {
   const db = (options.db ||
-              level(options.sessionPath || 'webgram-client-secrets', {
+              level(options.clientSecretsDBName || 'webgram-client-secrets', {
                 valueEncoding: 'json'
               }))
 
