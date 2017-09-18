@@ -4,7 +4,11 @@
 
 function get (db, key) {
   return new Promise((resolve, reject) => {
-    if (db === 'skip') reject({notFound: true})
+    if (db === 'skip') {
+      const err = Error('not found')
+      err.notFound = true
+      reject(err)
+    }
     db.get(key, (err, data) => {
       if (err) reject(err)
       resolve(data)

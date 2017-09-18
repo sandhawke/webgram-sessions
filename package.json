@@ -15,6 +15,7 @@
   "author": "Sandro Hawke (http://hawke.org/sandro)",
   "license": "MIT",
   "dependencies": {
+    "dom-storage": "^2.0.2",
     "level": "^1.7.0"
   },
   "browser": "browser_client.js",

@@ -1,15 +1,18 @@
 'use strict'
 
+// KEEP this file in sync with browser_client.js
+//
+// or figure out how to factor them together, given packaging for the browser...
+
 const webgram = require('webgram')
-const level = require('level')
-const alevel = require('./asynclevel')
-const debug = require('debug')('webgram-sessions:client')
+const Storage = require('dom-storage')
+const debug = require('debug')('webgram_sessions_client')
 
 async function attach (client, options = {}) {
-  const db = (options.db ||
-              level(options.clientSecretsDBName || 'webgram-client-secrets', {
-                valueEncoding: 'json'
-              }))
+  const localStorage = new Storage(
+    options.clientSecretsDBName || 'webgram-client-secrets.json',
+    { strict: false, ws: '  ' }
+  )
 
   client.on('session-error', msg => {
     throw Error('login failed: ' + msg)
@@ -23,9 +26,8 @@ async function attach (client, options = {}) {
         secret,
         whenAdded: new Date()
       }
-      // make sure it's saved before we tell the client?
       client.sessionData = sessionData
-      await alevel.put(db, client.address, sessionData)
+      localStorage.setItem(client.address, JSON.stringify(sessionData))
     }
     debug('session active, okay to do stuff in session')
     client.emit('$session-active')
@@ -33,17 +35,7 @@ async function attach (client, options = {}) {
 
   if (!client.sessionData) {
     debug('looking for saved session data')
-    try {
-      client.sessionData = await alevel.get(db, client.address)
-      debug('got it')
-    } catch (e) {
-      if (e.notFound) {
-        debug('no saved session data in database for', client.address)
-        // fall through
-      } else {
-        throw e
-      }
-    }
+    client.sessionData = localStorage.getItem(client.address)
   }
 
   // use sendDuringSetup if we have it
