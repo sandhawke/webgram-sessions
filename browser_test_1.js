@@ -1,22 +1,24 @@
 'use strict'
 
 const webgram = require('webgram')
-const logins = require('.')
+const sessions = require('.')
 
 const conn = new webgram.Client()
-console.log(logins)
-console.log('foo', logins.foo)
-console.log('attach', logins.attach)
-logins.attach(conn)
+console.log(sessions)
+sessions.hook(conn)
+
+conn.send('plan', 2)
+
 conn.on('pong', x => {
   conn.send('equal', x, 100)
   conn.send('end')
   console.log('got pong', x)
   document.body.innerHTML = '<h1>Test complete.  Close this window please.</h1>'
-  // setTimeout(() => {document.location = 'http://hawke.org/'}, 1000)
 })
+
 conn.send('ping', 100)
 
-conn.on('$login', userData => {
+conn.on('$session-active', userData => {
   console.log('userData', userData)
+  conn.send('equal', 1, 1)
 })

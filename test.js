@@ -2,7 +2,7 @@
 
 const test = require('tape')
 const webgram = require('webgram')
-const logins = require('.')
+const sessions = require('.')
 
 test(async (t) => {
   t.plan(1)
@@ -10,7 +10,7 @@ test(async (t) => {
   // need fixed port for session restore
   const s = new webgram.Server({port: 9891})
 
-  logins.attach(s)
+  sessions.server.hook(s)
   await s.start() // need to wait for address
 
   s.on('ping', (conn, ...args) => {
@@ -19,7 +19,8 @@ test(async (t) => {
 
   // console.log('address', s.address)
   const c = new webgram.Client(s.address)
-  logins.attach(c)
+  sessions.client.hook(c)
+
   c.on('pong', (text) => {
     console.log('test response to c1:', text)
     t.equal(text, 'hello')

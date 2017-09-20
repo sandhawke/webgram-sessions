@@ -1,18 +1,16 @@
 'use strict'
 
-const webgram = require('webgram')
-
-function attach (arg, opts) {
-  if (arg instanceof webgram.Server) {
-    return module.exports.server.attach(arg, opts)
+function hook (arg, opts) {
+  if (arg.acceptsWebgramServerHooks) {
+    return module.exports.server.hook(arg, opts)
   }
-  if (arg instanceof webgram.Client) {
-    return module.exports.client.attach(arg, opts)
+  if (arg.acceptsWebgramClientHooks) {
+    return module.exports.client.hook(arg, opts)
   }
-  throw Error('.attach first arg much be a webgram Client or Server')
+  throw Error('.attach first arg must appear as webgram Client or Server')
 }
 
 module.exports.server = require('./server')
 module.exports.client = require('./client')
 module.exports.Client = require('./client').Client
-module.exports.attach = attach
+module.exports.hook = hook

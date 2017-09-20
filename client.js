@@ -4,87 +4,90 @@
 //
 // or figure out how to factor them together, given packaging for the browser...
 
-const webgram = require('webgram')
+// const webgram = require('webgram')
 const debug = require('debug')('webgram_sessions_client')
 const myStorage = require('./storage')
 
-async function attach (client, options = {}) {
-  const localStorage = myStorage(options)
-
-  client.on('session-error', msg => {
-    throw Error('login failed: ' + msg)
-  })
-
-  client.on('session-ok', async (id, secret) => {
-    if (secret) {
-      const sessionData = {
-        address: client.address,
-        id,
-        secret,
-        whenAdded: new Date()
-      }
-      client.sessionData = sessionData
-      localStorage.setItem(client.address, JSON.stringify(sessionData))
-    }
-    debug('session active, okay to do stuff in session')
-    client.emit('$session-active')
-  })
-
-  if (!client.sessionData) {
-    debug('looking for saved session data')
-    client.sessionData = JSON.parse(localStorage.getItem(client.address))
-  }
-
-  // use sendDuringSetup if we have it
-  const send = (client.sendDuringSetup
-                ? client.sendDuringSetup.bind(client)
-                : client.send.bind(client))
-
-  if (client.sessionData) {
-    debug('trying to resume session using %O', client.sessionData)
-    send('session-resume',
-         client.sessionData.id,
-         client.sessionData.secret)
-  } else {
-    send('session-create')
-  }
+function hook (client, options = {}) {
+  return new Hook(client, options)
 }
 
-class Client extends webgram.Client {
-  constructor (...args) {
-    super(...args)
-    this.sessionBuffer = []
-    this.inSession = false
-    this.on('$session-active', () => {
-      debug('caught $session-active, sending old stuff')
-      for (let item of this.sessionBuffer) {
-        debug('sending queued message', item)
-        this.socket.send(item)
+class Hook {
+  constructor (client, options) {
+    this.client = client
+    Object.assign(this, options)
+
+    if (client.sessionsHook) throw Error('sessions hook already installed')
+    client.sessionsHook = this
+    debug('hook installed')
+
+    const localStorage = myStorage(options)
+    const realSend = client.send.bind(client)
+    const sessionBuffer = []
+    let inSession = false
+
+    debug('intercepting client.send')
+    client.send = (...args) => {
+      if (inSession) {
+        realSend(...args)
+      } else {
+        debug('buffering until session is ready %o', args)
+        sessionBuffer.push(JSON.stringify(args))
       }
-      this.inSession = true
-      debug('sending normally now')
+    }
+
+    client.on('session-error', msg => {
+      throw Error('login failed: ' + msg)
     })
-    attach(this, this)
-  }
 
-  // this is how we escape the buffering for our setup messages
-  sendDuringSetup (...args) {
-    super.send(...args)
-  }
+    client.on('session-ok', async (id, secret) => {
+      if (secret) {
+        const sessionData = {
+          address: client.address,
+          id,
+          secret,
+          whenAdded: new Date()
+        }
+        client.sessionData = sessionData
+        localStorage.setItem(client.address, JSON.stringify(sessionData))
+      }
+      debug('session active, okay to do stuff in session')
 
-  // buffer everything until the session is started
-  send (...args) {
-    if (this.inSession) {
-      super.send(...args)
+      debug('sending old stuff')
+      for (let item of sessionBuffer) {
+        debug('sending queued message', item)
+        // use low-level send because we already stringified it, for
+        // buffering safely
+        this.client.socket.send(item)
+      }
+      inSession = true
+      debug('sending normally now')
+
+      client.emit('$session-active')
+    })
+
+    //
+    // Look up saved session auth data, if any, and send it
+    //
+
+    if (!client.sessionData) {
+      debug('looking for saved session data')
+      client.sessionData = JSON.parse(localStorage.getItem(client.address))
+    }
+
+    if (client.sessionData) {
+      debug('trying to resume session using %O', client.sessionData)
+      realSend('session-resume',
+               client.sessionData.id,
+               client.sessionData.secret)
     } else {
-      debug('buffering until session is ready %o', args)
-      this.sessionBuffer.push(JSON.stringify(args))
+      debug('no session data found; starting new session')
+      realSend('session-create')
     }
   }
 }
 
-module.exports.attach = attach
-module.exports.Client = Client
+module.exports = { hook, Hook }
 
-// for when this gets substited for index.js by browserify
-module.exports.client = { attach, Client }
+// for when this gets substituted for index.js by browserify
+module.exports.client = { hook, Hook }

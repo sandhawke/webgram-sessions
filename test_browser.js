@@ -4,15 +4,14 @@ const test = require('tape')
 const browserify = require('browserify')
 const webgram = require('webgram')
 const opn = require('opn')
-const logins = require('.')
+const sessions = require('.')
 
 test(async (t) => {
-  t.plan(1)
-
   const b = browserify('browser_test_1.js')
 
   const s = new webgram.Server()
-  logins.attach(s)
+  console.dir(s)
+  sessions.server.hook(s)
 
   s.app.get('/', (req, res) => {
     res.send(`<!doctype html>
@@ -36,6 +35,11 @@ test(async (t) => {
 
   s.on('ping', (conn, ...args) => {
     conn.send('pong', ...args)
+  })
+
+  s.on('plan', (conn, n) => {
+    console.log('called plan', n)
+    t.plan(n)
   })
 
   s.on('equal', (conn, a, b) => {
