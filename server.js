@@ -15,7 +15,10 @@ function attach (server, options = {}) {
               }))
 
   let nextSessionID = null
+  server.sessionsHook = true   // for sanity checke by webgram-logins
+  debug('hook installed')
 
+  // todo: simplify using mutexify
   if (!options.dispenseSessionID) {
     options.dispenseSessionID = async () => {
       debug('dispensing session id')
@@ -95,6 +98,7 @@ function attach (server, options = {}) {
     debug('cached sessionData', sessionData)
     if (!sessionData) {
       try {
+        debug('looking in database file')
         sessionData = await alevel.get(db, _sessionID)
         debug('loaded sessionData %o', sessionData)
       } catch (err) {
@@ -102,12 +106,14 @@ function attach (server, options = {}) {
           debug('no match for id', _sessionID)
           conn.send('session-error', 'incorrect-id')
         } else {
+          debug('error', err)
           console.error('error in looking for userdata', err)
           conn.send('session-error', 'internal-error')
         }
         return
       }
     }
+    debug('got it', sessionData)
 
     // todo: add some crypto
 
@@ -125,13 +131,14 @@ function attach (server, options = {}) {
   })
 
   async function conclude (conn, sessionData) {
+    debug('concluding, setting sessionData to %o', sessionData)
     const id = sessionData._sessionID
     conn.sessionData = sessionData
     sessionDataBySessionID.set(id, sessionData)
     await conn.save()
     server.emit('$session-active', conn)
     conn.emit('$session-active')
-    debug('session-create complete')
+    debug('session setup complete')
   }
 }
 
