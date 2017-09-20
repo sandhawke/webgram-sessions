@@ -1,11 +1,11 @@
 'use strict'
 
 const webgram = require('webgram')
-const sessions = require('.')
+// const sessions = require('.')
 
 const conn = new webgram.Client()
-console.log(sessions)
-sessions.hook(conn)
+// console.log(sessions)
+// sessions.hook(conn)
 
 conn.send('plan', 2)
 

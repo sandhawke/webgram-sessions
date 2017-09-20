@@ -4,13 +4,13 @@ const test = require('tape')
 const browserify = require('browserify')
 const webgram = require('webgram')
 const opn = require('opn')
-const sessions = require('.')
+// const sessions = require('.')
 
 test(async (t) => {
   const b = browserify('browser_test_1.js')
 
   const s = new webgram.Server()
-  sessions.server.hook(s)
+  // sessions.server.hook(s)
 
   s.app.get('/', (req, res) => {
     res.send(`<!doctype html>
