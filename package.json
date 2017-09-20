@@ -1,6 +1,6 @@
 {
   "name": "webgram-sessions",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "description": "recognize devices and store session state for webgram",
   "main": "index.js",
   "scripts": {
