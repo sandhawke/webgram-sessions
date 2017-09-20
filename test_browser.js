@@ -10,7 +10,6 @@ test(async (t) => {
   const b = browserify('browser_test_1.js')
 
   const s = new webgram.Server()
-  console.dir(s)
   sessions.server.hook(s)
 
   s.app.get('/', (req, res) => {
@@ -45,6 +44,10 @@ test(async (t) => {
   s.on('equal', (conn, a, b) => {
     console.log('called equal', a, b)
     t.equal(a, b)
+  })
+
+  s.on('consolelog', (conn, parts) => {
+    console.log(...parts)
   })
 
   // let proc = new teen.SubProcess('firefox', ['--no-remote', '-P', 'plantohelp', s.siteURL])
