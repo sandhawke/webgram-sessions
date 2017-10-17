@@ -37,10 +37,16 @@ class Hook {
     }
 
     client.on('session-error', msg => {
-      throw Error('login failed: ' + msg)
+      // these should be error codes of course :-(
+      if (msg === 'incorrect-secret' ||
+          msg === 'unknown session-id for resume') {
+        // oh well, maybe the server is forcing a reset or something
+        realSend('session-create')
+      } else throw Error('session-error: ' + JSON.stringify(msg))
     })
 
     client.on('session-ok', async (id, secret) => {
+      debug('session-ok id=%j', id)
       if (secret) {
         const sessionData = {
           address: client.address,
@@ -64,7 +70,19 @@ class Hook {
       debug('sending normally now')
 
       client.emit('$session-active')
+      debug('done with emit $session-active')
     })
+
+    client.on('$session-active', () => {
+      debug('example handler')
+    })
+
+    client.waitForSession = () => {
+      if (inSession) return Promise.resolve()
+      return new Promise(resolve => {
+        client.once('$session-active', resolve)
+      })
+    }
 
     //
     // Look up saved session auth data, if any, and send it
@@ -75,7 +93,7 @@ class Hook {
       client.sessionData = JSON.parse(localStorage.getItem(client.address))
     }
 
-    if (client.sessionData) {
+    if (client.sessionData && !this.skipResume) {
       debug('trying to resume session using %O', client.sessionData)
       realSend('session-resume',
                client.sessionData.id,

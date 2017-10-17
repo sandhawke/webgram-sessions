@@ -16,6 +16,8 @@ class Hook {
 
     const sessionDataBySessionID = new Map()
 
+    debug('2 webgram.Server options=%o', options)
+    debug('server secrets file %j', options.serverSecretsDBName)
     const db = (options.db ||
                 level(options.serverSecretsDBName || 'webgram-server-secrets', {
                   valueEncoding: 'json'
@@ -109,7 +111,7 @@ class Hook {
         } catch (err) {
           if (err.notFound) {
             debug('no match for id', _sessionID)
-            conn.send('session-error', 'incorrect-id')
+            conn.send('session-error', 'unknown session-id for resume')
           } else {
             debug('error', err)
             console.error('error in looking for userdata', err)
