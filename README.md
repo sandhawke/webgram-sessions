@@ -66,3 +66,10 @@ Some fields in sessionData are maintainted by the system:
 * _fromClient points to an object passed by client during session
 creation
 
+## Credits and Disclaimer
+
+This material is based upon work supported by the National Science
+Foundation under Grant No. 1313789.  Any opinions, findings, and
+conclusions or recommendations expressed in this material are those of
+the author(s) and do not necessarily reflect the views of the National
+Science Foundation.
