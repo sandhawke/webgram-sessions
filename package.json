@@ -13,7 +13,7 @@
     "url": "htts://github.com/sandhawke/webgram-sessions"
   },
   "author": "Sandro Hawke (http://hawke.org/sandro)",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "dom-storage": "^2.0.2",
     "level": "^1.7.0"
