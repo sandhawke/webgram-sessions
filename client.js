@@ -83,6 +83,7 @@ class Hook {
         client.once('$session-active', resolve)
       })
     }
+    debug('waitForSession defined, now %o', client)
 
     //
     // Look up saved session auth data, if any, and send it
